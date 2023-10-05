@@ -105,6 +105,17 @@
       color: #007BFF;
       margin-bottom: 10px;
     }
+
+    .comment button.delete-button {
+      background-color: #ff3333;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-weight: bold;
+      margin: 10px;
+    }
   </style>
 </head>
 
@@ -114,7 +125,7 @@
   <div class="comment-container">
     <div id="commentFormContainer">
       <form id="commentForm">
-        <input type="text" id="commentText" placeholder="댓글 입력">
+        <input type="text" id="commentText" placeholder="댓글 입력란">
         <button id="save" type="button">등록</button>
       </form>
     </div>
@@ -131,7 +142,7 @@
     import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
     import { collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
     import { getDocs } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
-
+    import { deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
     // Firebase 구성 정보 설정
     const firebaseConfig = {
       apiKey: "AIzaSyB9Ur_8F4TtHjLG4r6hZCfy937nsHFOM1o",
@@ -144,10 +155,17 @@
     };
 
     $("#save").click(async function () {
-      const commentText = $("#commentText").val();
+      const commentText = $("#commentText").val().trim(); // 입력값의 앞뒤 공백 제거
+
+      if (commentText === "") {
+        alert("댓글 내용을 입력해주세요.");
+        return; // 빈 칸인 경우 메시지 표시하고 함수 종료
+      }
+
       let doc = { 'commentText': commentText };
       await addDoc(collection(db, "nbcmini"), doc);
     })
+
 
     // Firebase 인스턴스 초기화
     const app = initializeApp(firebaseConfig);
@@ -155,13 +173,13 @@
     const comments = [];
 
     async function fetchAndDisplayComments() {
-  const docs = await getDocs(collection(db, "nbcmini"));
-  docs.forEach((doc) => {
-    let row = doc.data();
-    comments.push(row.commentText); // Assuming your comment field is named 'commentText'
-  });
-   displayComments();
-}
+      const docs = await getDocs(collection(db, "nbcmini"));
+      docs.forEach((doc) => {
+        let row = doc.data();
+        comments.push(row.commentText); 
+      });
+      displayComments();
+    }
 
     // 등록 버튼 클릭 시 댓글 추가
     document.getElementById("save").addEventListener("click", function () {
@@ -180,37 +198,56 @@
 
     // 댓글 목록을 화면에 표시하는 함수
     function displayComments() {
-  const commentsDiv = document.getElementById("comments");
-  commentsDiv.innerHTML = ""; // 기존 댓글을 지우고 다시 출력
+      const commentsDiv = document.getElementById("comments");
+      commentsDiv.innerHTML = ""; // 기존 댓글을 지우고 다시 출력
 
-  if (comments.length === 0) {
-    const noCommentsMessage = document.createElement("div");
-    noCommentsMessage.textContent = "댓글이 없습니다.";
-    noCommentsMessage.style.marginTop = "10px"; // 간격 조정
-    commentsDiv.appendChild(noCommentsMessage);
-    return;
-  }
+      if (comments.length === 0) {
+        const noCommentsMessage = document.createElement("div");
+        noCommentsMessage.textContent = "댓글이 없습니다.";
+        noCommentsMessage.style.marginTop = "10px"; // 간격 조정
+        commentsDiv.appendChild(noCommentsMessage);
+        return;
+      }
 
-  comments.forEach(function (commentText, index) {
-    const commentElement = document.createElement("div");
-    commentElement.textContent = commentText;
-    commentElement.classList.add("comment");
+      comments.forEach(function (commentText, index) {
+        const commentElement = document.createElement("div");
+        commentElement.textContent = commentText;
+        commentElement.classList.add("comment");
 
-    // 삭제 버튼 추가
-    const deleteButton = document.createElement("button");
-    deleteButton.textContent = "삭제";
-    deleteButton.addEventListener("click", function () {
-      comments.splice(index, 1); // 배열에서 댓글 제거
-      displayComments(); // 댓글 목록 갱신
-      alert('삭제 되었습니다.')
-    });
+        // 삭제 버튼 추가
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "삭제";
+        deleteButton.classList.add("delete-button"); // 새로운 클래스 추가
+        // 삭제 버튼 클릭 시
+        deleteButton.addEventListener("click", async function () {
+          // 삭제 여부를 묻는 확인 대화 상자 표시
+          const confirmation = confirm("삭제하시겠습니까?");
 
-    commentElement.appendChild(deleteButton);
-    commentsDiv.appendChild(commentElement);
-  });
-}
+          if (confirmation) {
+            // 확인 버튼을 눌렀을 때만 삭제 수행
+            comments.splice(index, 1); // 배열에서 댓글 제거
+            displayComments(); // 댓글 목록 갱신
 
-fetchAndDisplayComments(); // Fetch comments when the page loads
+            // Firebase에서도 삭제
+            const commentToDelete = comments[index];
+            const querySnapshot = await getDocs(collection(db, "nbcmini"));
+            querySnapshot.forEach(async (doc) => {
+              if (doc.data().commentText === commentToDelete) {
+                // Firebase에서 해당 댓글 삭제
+                await deleteDoc(doc.ref);
+              }
+            });
+
+            alert('삭제 되었습니다.');
+          }
+        });
+
+        commentElement.appendChild(deleteButton);
+        commentsDiv.appendChild(commentElement);
+      });
+    }
+
+    fetchAndDisplayComments(); 
   </script>
 </body>
 
