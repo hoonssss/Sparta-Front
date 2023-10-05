@@ -143,6 +143,7 @@
     import { collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
     import { getDocs } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
     import { deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
     // Firebase 구성 정보 설정
     const firebaseConfig = {
       apiKey: "AIzaSyB9Ur_8F4TtHjLG4r6hZCfy937nsHFOM1o",
@@ -176,7 +177,7 @@
       const docs = await getDocs(collection(db, "nbcmini"));
       docs.forEach((doc) => {
         let row = doc.data();
-        comments.push(row.commentText); 
+        comments.push(row.commentText);
       });
       displayComments();
     }
@@ -225,23 +226,27 @@
 
           if (confirmation) {
             // 확인 버튼을 눌렀을 때만 삭제 수행
-            comments.splice(index, 1); // 배열에서 댓글 제거
-            displayComments(); // 댓글 목록 갱신
-
-            // Firebase에서도 삭제
             const commentToDelete = comments[index];
-            const querySnapshot = await getDocs(collection(db, "nbcmini"));
-            querySnapshot.forEach(async (doc) => {
-              if (doc.data().commentText === commentToDelete) {
-                // Firebase에서 해당 댓글 삭제
-                await deleteDoc(doc.ref);
-              }
-            });
+            const commentIndex = comments.indexOf(commentToDelete);
 
-            alert('삭제 되었습니다.');
+            if (commentIndex !== -1) {
+              // Only attempt to delete if the comment is found in the array
+              comments.splice(commentIndex, 1); // 배열에서 댓글 제거
+              displayComments(); // 댓글 목록 갱신
+
+              // Firebase에서도 삭제
+              const querySnapshot = await getDocs(collection(db, "nbcmini"));
+              querySnapshot.forEach(async (doc) => {
+                if (doc.data().commentText === commentToDelete) {
+                  // Firebase에서 해당 댓글 삭제
+                  await deleteDoc(doc.ref);
+                }
+              });
+
+              alert('삭제 되었습니다.');
+            }
           }
         });
-
         commentElement.appendChild(deleteButton);
         commentsDiv.appendChild(commentElement);
       });
